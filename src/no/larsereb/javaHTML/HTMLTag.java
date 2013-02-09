@@ -181,7 +181,7 @@ public class HTMLTag {
 	}
 	
 	private HTMLTag header(String level, String header) {
-		addChild(new HTMLTag("h1").addText(header));
+		addChild(new HTMLTag(level).addText(header));
 		return this;
 	}
 
