@@ -13,10 +13,27 @@ Example:
 public String makeButton(String iconClass, String text) {
   HTMLTag output = new HTMLTag("div");
 
-  div.addStyleRule("margin", "5px").span()
+  output.addStyleRule("margin", "5px").span()
     .span().addClass("icon").addClass(iconClass).getParent()
     .span().addText(text);
     
   return output.root().toString(); // root() fetches the root node
+}
+</pre>
+
+This could also be:
+
+<pre>
+public String makeButton(String iconClass, String text) {
+  return new HTMLTag("div").
+    addStyleRule("margin", "5px")
+    .span()
+      .span()
+        .addClass("icon")
+        .addClass(iconClass)
+        .getParent()
+      .span()
+        .addText(text).
+      root().toString;
 }
 </pre>
