@@ -11,7 +11,7 @@ public class HTMLTagTest {
 	public void test() {
 		HTMLTag tag = new HTMLTag("html");
 		Assert.assertEquals("<html></html>", tag.toString());
-		tag.addClass("someClass");
+		tag.addStyleClass("someClass");
 		Assert.assertEquals("<html class=\"someClass\"></html>", tag.toString());
 		tag = new HTMLTag("html").addStyleRule("padding", "5px");
 		Assert.assertEquals("<html style=\"padding:5px;\"></html>", tag.toString());
@@ -19,7 +19,7 @@ public class HTMLTagTest {
 		Assert.assertEquals("<html manifest=\"manifest.txt\"></html>", tag.toString());
 		
 		tag.addStyleRule("margin-bottom", "5px")
-		   .addClass("someClass")
+		   .addStyleClass("someClass")
 		   .setAttribute("data-rol", "test")
 		   .setAttribute("data-comment", "just testing that chaining works.");
 	}

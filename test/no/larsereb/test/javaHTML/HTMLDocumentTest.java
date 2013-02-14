@@ -13,8 +13,8 @@ public class HTMLDocumentTest {
 		HTMLDocument d = HTMLDocument.startDocument();
 		d.getHTML()
 			.setAttribute("manifest", "manifest.txt")
-			.addChild("head")
-			  .addChild("title")
+			.newChild("head")
+			  .newChild("title")
 			    .addText("This is the title").getParent()
 			  .getParent()
 			.body()
