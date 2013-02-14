@@ -25,16 +25,16 @@ This could also be:
 
 <pre>
 public String makeButton(String iconClass, String text) {
-  return new HTMLTag("div").
-    addStyleRule("margin", "5px")
+  return new HTMLTag("div")
+  .addStyleRule("margin", "5px")
     .span()
       .span()
         .addClass("icon")
         .addClass(iconClass)
         .getParent()
       .span()
-        .addText(text).
-      root().toString;
+        .addText(text)
+      .root().toString;
 }
 </pre>
 
