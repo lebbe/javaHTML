@@ -18,7 +18,7 @@ public class HTMLDocumentTest {
 			    .addText("This is the title").getParent()
 			  .getParent()
 			.body()
-			  .h1("This is a header")
+			  .setHeader1("This is a header")
 			  .p().addText("This is a paragraph with a ").a()
 			    .setAttribute("href", "http://reddit.com/")
 			    .addText("link").getParent()

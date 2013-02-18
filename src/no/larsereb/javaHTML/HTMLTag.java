@@ -87,7 +87,7 @@ public class HTMLTag {
 			writer.write(" style=\"");
 			
 			for(Entry<String, String> e: styleRules.entrySet())
-				writer.write(e.getKey() + ":" + e.getValue() + ";");
+				writer.write(e.getKey() + ": " + e.getValue() + ";");
 			
 			writer.write("\"");
 		}
@@ -123,6 +123,12 @@ public class HTMLTag {
 			styleClasses.add(styleClass);
 		return this;
 	}
+	
+	public HTMLTag addStyleClassIf(boolean condition, String styleClass) {
+		if(condition)
+			addStyleClass(styleClass);
+		return this;
+	}
 
 	/**
 	 * Parses the value of a HTML "class"-attribute. Does not check if
@@ -152,6 +158,12 @@ public class HTMLTag {
 		return this;
 	}
 	
+	public HTMLTag setAttributeIf(boolean condition, String attribute, String value) {
+		if(condition)
+			setAttribute(attribute, value);
+		return this;
+	}
+	
 	public HTMLTag setId(String id) {
 		return setAttribute("id", id);
 	}
@@ -167,6 +179,12 @@ public class HTMLTag {
 		return this;
 	}
 
+	public HTMLTag addStyleRuleIf(boolean condition, String attibute, String value) {
+		if(condition)
+			addStyleRule(attibute, value);
+		return this;
+	}
+	
 	/**
 	 * Parses the value of a HTML "style"-attribute.
 	 *
@@ -248,6 +266,12 @@ public class HTMLTag {
 		t.setText(text.toString());
 		return this;
 	}
+	
+	public HTMLTag addTextIf(boolean condition, Object text) {
+		if(condition)
+			addText(text);
+		return this;
+	}
 
 	private void setOnlyText(boolean onlyText) {
 		this.onlyText = onlyText;
@@ -316,6 +340,11 @@ public class HTMLTag {
 	public HTMLTag a() {
 		return newChild("a");
 	}
+	
+	public HTMLTag setHeader1(String string) {
+		h1().addText(string);
+		return this;
+	}
 
 	/**
 	 * Look how nice and simple it can be.
@@ -352,10 +381,5 @@ public class HTMLTag {
 		        .setAttribute("href", "http://vg.no")
 		        .addText("Trykk her for Œ bes¿ke vg.");
 		System.out.println(tag.getRoot());
-	}
-
-	public HTMLTag h1(String string) {
-		h1().addText(string);
-		return this;
 	}
 }
