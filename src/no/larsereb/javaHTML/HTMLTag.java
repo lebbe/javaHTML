@@ -9,6 +9,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import javax.servlet.jsp.tagext.BodyContent;
+
+
 
 
 public class HTMLTag {
@@ -20,6 +23,7 @@ public class HTMLTag {
 	private Map<String, String> styleRules;
 	private boolean onlyText;
 	private String text;
+	private BodyContent content;
 
 	/**
 	 * Constructor.
@@ -32,6 +36,30 @@ public class HTMLTag {
 		attributes = new HashMap<String, String>();
 		styleRules = new HashMap<String, String>();
 		children = new ArrayList<HTMLTag>();
+	}
+
+	/**
+	 * A node which works as a wrapper outside the body content of a jsp tag.
+	 * 
+	 * This does not output any other textual output then what exists in the body content.
+	 * If you, for instance, want a span around the body content you could do:
+	 * 
+	 * <pre>
+	 * new HTMLTag("span").newChild(new HTMLTag(getBodyContent()));
+	 * </pre>
+	 * 
+	 * You can also use the convenient method {@link #addContent(BodyContent)}:
+	 * 
+	 * <pre>
+	 * new HTMLTag("span").addContent(getBodyContent());
+	 * </pre>
+	 *
+	 * @param content
+	 */
+	public HTMLTag(BodyContent content) {
+		onlyText = true;
+		text = null;
+		this.content = content;
 	}
 
 	/**
@@ -60,8 +88,11 @@ public class HTMLTag {
 	 * @throws IOException
 	 */
 	public void writeOutput(Writer writer) throws IOException {
-		if(onlyText && text != null) {
-			writer.write(text);
+		if(onlyText) {
+			if(text != null)
+				writer.write(text);
+			if(content != null)
+				content.writeOut(writer);
 			return;
 		}
 		writer.write("<" + nodeName);
@@ -99,7 +130,7 @@ public class HTMLTag {
 			
 			for(HTMLTag child: children)
 				child.writeOutput(writer);
-;
+
 		} else {
 			writer.write(">");
 		}
@@ -280,6 +311,11 @@ public class HTMLTag {
 	
 	private void setText(String text) {
 		this.text = text;
+	}
+	
+	public HTMLTag addContent(BodyContent content) {
+		newChild(new HTMLTag(content));
+		return this;
 	}
 
 	public HTMLTag body() {
