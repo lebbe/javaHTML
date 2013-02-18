@@ -25,15 +25,49 @@ This could also be:
 
 <pre>
 public String makeButton(String iconClass, String text) {
-  return new HTMLTag("div").
-    addStyleRule("margin", "5px")
+  return new HTMLTag("div")
+  .addStyleRule("margin", "5px")
     .span()
       .span()
         .addClass("icon")
         .addClass(iconClass)
         .getParent()
       .span()
-        .addText(text).
-      root().toString;
+        .addText(text)
+      .root().toString;
+}
+</pre>
+
+
+<b>Using javaHTML to create custom tags in jsp</b>
+
+javaHTML is optimized for writing output for custom jsp tags:
+You can send the JSPWriter object in to the HTMLTag element,
+and this object is recursively sent throughout the nodes. This
+means fewer costly string-concatenation at runtime.
+
+<pre>
+public class CustomTag extends BodyTagSupport {
+  public int doStartTag() throws JspException {
+		return EVAL_BODY_BUFFERED;
+	}
+	
+	public int doEndTag() throws JspException {
+		HTMLTag mainTag;
+		
+		// Do your stuff here
+		....
+		
+		try {
+			mainTag.writeOutput(pageContext.getOut());
+		} catch (IOException e) {
+			throw new ApplicationException(e);
+		}
+		return EVAL_PAGE;
+	}
+	
+	public int doAfterBody() {
+		return SKIP_BODY;
+  }
 }
 </pre>
