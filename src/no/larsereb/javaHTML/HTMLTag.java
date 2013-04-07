@@ -2,6 +2,7 @@ package no.larsereb.javaHTML;
 
 import java.io.CharArrayWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -9,12 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
-import javax.servlet.jsp.tagext.BodyContent;
-
-
-
-
 public class HTMLTag {
+	private HTMLTag anchor;
 	private List<String> styleClasses;
 	private String nodeName;
 	private HTMLTag parent;
@@ -23,7 +20,9 @@ public class HTMLTag {
 	private Map<String, String> styleRules;
 	private boolean onlyText;
 	private String text;
-	private BodyContent content;
+	private boolean visited = false;
+	private boolean ended = false;
+	private boolean isAnchor;
 
 	/**
 	 * Constructor.
@@ -36,30 +35,6 @@ public class HTMLTag {
 		attributes = new HashMap<String, String>();
 		styleRules = new HashMap<String, String>();
 		children = new ArrayList<HTMLTag>();
-	}
-
-	/**
-	 * A node which works as a wrapper outside the body content of a jsp tag.
-	 * 
-	 * This does not output any other textual output then what exists in the body content.
-	 * If you, for instance, want a span around the body content you could do:
-	 * 
-	 * <pre>
-	 * new HTMLTag("span").newChild(new HTMLTag(getBodyContent()));
-	 * </pre>
-	 * 
-	 * You can also use the convenient method {@link #addContent(BodyContent)}:
-	 * 
-	 * <pre>
-	 * new HTMLTag("span").addContent(getBodyContent());
-	 * </pre>
-	 *
-	 * @param content
-	 */
-	public HTMLTag(BodyContent content) {
-		onlyText = true;
-		text = null;
-		this.content = content;
 	}
 
 	/**
@@ -91,10 +66,20 @@ public class HTMLTag {
 		if(onlyText) {
 			if(text != null)
 				writer.write(text);
-			if(content != null)
-				content.writeOut(writer);
 			return;
 		}
+		writeStartTag(writer);
+
+		// Output children
+		if(!children.isEmpty()) {
+			for(HTMLTag child: children)
+				child.writeOutput(writer);
+
+		}
+		writer.write("</" + nodeName + ">");
+	}
+
+	private void writeStartTag(Writer writer) throws IOException {
 		writer.write("<" + nodeName);
 
 		// Write classes into "class" attribute.
@@ -113,28 +98,83 @@ public class HTMLTag {
 		// output other properties
 		for(Entry<String, String> e: attributes.entrySet())
 			writer.write(" " + e.getKey() + "=\"" + e.getValue() + "\"");
-		
+
 		// Write style rules into "style" attribute
 		if(!styleRules.isEmpty()) {
 			writer.write(" style=\"");
-			
+
 			for(Entry<String, String> e: styleRules.entrySet())
 				writer.write(e.getKey() + ": " + e.getValue() + ";");
-			
+
 			writer.write("\"");
 		}
+		writer.write(">");
+	}
 
-		// Output children
-		if(!children.isEmpty()) {
-			writer.write(">");
-			
-			for(HTMLTag child: children)
-				child.writeOutput(writer);
 
-		} else {
-			writer.write(">");
+
+	/**
+	 * If start-tag of this tag is already written to a writer,
+	 * we need to clean up the private help variables when writing
+	 * it once more.
+	 *
+	 * @param tag
+	 */
+	private static void cleanUp(HTMLTag tag) {
+		tag.visited = false;
+		tag.ended = false;
+
+		for(HTMLTag child: tag.children) {
+			cleanUp(child);
 		}
-		writer.write("</" + nodeName + ">");
+	}
+
+	private static void writeStartTagOutputHelper(HTMLTag tag, Writer writer) throws IOException {
+		while(!tag.ended) {
+			if(!tag.visited) {
+				tag.writeStartTag(writer);
+				tag.visited = true;
+			}
+
+			if(tag.isAnchor) return;
+
+			boolean newChild = false;
+			for(HTMLTag child: tag.children) {
+				if(!child.ended) {
+					tag = child;
+					newChild = true;
+					break;
+				}
+			}
+
+			if(newChild) continue;
+
+			tag.ended = true;
+			writer.write("</" + tag.nodeName + ">");
+			if(tag.getParent() != null)
+				tag = tag.getParent();
+		}
+	}
+
+	/**
+	 *
+	 * @param tag
+	 * @param writer
+	 * @throws IOException
+	 */
+	public static void writeStartTagOutput(HTMLTag tag, Writer writer) throws IOException {
+		if(tag.visited) cleanUp(tag);
+		writeStartTagOutputHelper(tag, writer);
+
+	}
+
+	public static void writeEndTagOutput(HTMLTag tag, Writer writer) throws IOException {
+		tag = tag.getRoot().anchor;
+		if(tag == null) return;
+		tag.ended = true;
+		writer.write("</" + tag.nodeName + ">");
+		if(tag.parent != null)
+			writeStartTagOutputHelper(tag.parent, writer);
 	}
 
 	/**
@@ -155,7 +195,7 @@ public class HTMLTag {
 			styleClasses.add(styleClass);
 		return this;
 	}
-	
+
 	public HTMLTag addStyleClassIf(boolean condition, String styleClass) {
 		if(condition)
 			addStyleClass(styleClass);
@@ -165,7 +205,7 @@ public class HTMLTag {
 	/**
 	 * Parses the value of a HTML "class"-attribute. Does not check if
 	 * values are valid, that is your job.
-	 * 
+	 *
 	 * @param styleClasses
 	 * @return this object
 	 */
@@ -179,7 +219,7 @@ public class HTMLTag {
 	}
 
 	/**
-	 * 
+	 *
 	 * @param attribute
 	 * @param value
 	 * @return this object
@@ -189,19 +229,19 @@ public class HTMLTag {
 			attributes.put(attribute, value);
 		return this;
 	}
-	
+
 	public HTMLTag setAttributeIf(boolean condition, String attribute, String value) {
 		if(condition)
 			setAttribute(attribute, value);
 		return this;
 	}
-	
+
 	public HTMLTag setId(String id) {
 		return setAttribute("id", id);
 	}
 
 	/**
-	 * 
+	 *
 	 * @param attibute
 	 * @param value
 	 * @return this object
@@ -216,7 +256,7 @@ public class HTMLTag {
 			addStyleRule(attibute, value);
 		return this;
 	}
-	
+
 	/**
 	 * Parses the value of a HTML "style"-attribute.
 	 *
@@ -235,7 +275,7 @@ public class HTMLTag {
 	}
 
 	/**
-	 * 
+	 *
 	 * @param nodeName
 	 * @return this object
 	 */
@@ -243,9 +283,9 @@ public class HTMLTag {
 		this.nodeName = nodeName;
 		return this;
 	}
-	
+
 	/**
-	 * 
+	 *
 	 * @param nodeName
 	 * @return the new child
 	 */
@@ -266,9 +306,9 @@ public class HTMLTag {
 		child.parent = this;
 		return this;
 	}
-	
+
 	/**
-	 * 
+	 *
 	 * @return parent object
 	 */
 	public HTMLTag getParent() {
@@ -276,7 +316,7 @@ public class HTMLTag {
 	}
 
 	/**
-	 * 
+	 *
 	 * @return root, if node is root returns itself.
 	 */
 	public HTMLTag getRoot() {
@@ -298,7 +338,7 @@ public class HTMLTag {
 		t.setText(text.toString());
 		return this;
 	}
-	
+
 	public HTMLTag addTextIf(boolean condition, Object text) {
 		if(condition)
 			addText(text);
@@ -308,14 +348,9 @@ public class HTMLTag {
 	private void setOnlyText(boolean onlyText) {
 		this.onlyText = onlyText;
 	}
-	
+
 	private void setText(String text) {
 		this.text = text;
-	}
-	
-	public HTMLTag addContent(BodyContent content) {
-		newChild(new HTMLTag(content));
-		return this;
 	}
 
 	public HTMLTag body() {
@@ -325,7 +360,7 @@ public class HTMLTag {
 	public HTMLTag head() {
 		return newChild("head");
 	}
-	
+
 	/**
 	 * Add title, only works if this is a head.
 	 *
@@ -337,11 +372,11 @@ public class HTMLTag {
 			newChild("title").addText(title);
 		return this;
 	}
-	
+
 	public HTMLTag div() {
 		return newChild("div");
 	}
-	
+
 	public HTMLTag span() {
 		return newChild("span");
 	}
@@ -361,15 +396,15 @@ public class HTMLTag {
 	public HTMLTag tbody() {
 		return newChild("tbody");
 	}
-	
+
 	public HTMLTag tr() {
 		return newChild("tr");
 	}
-	
+
 	public HTMLTag th() {
 		return newChild("th");
 	}
-	
+
 	public HTMLTag td() {
 		return newChild("td");
 	}
@@ -377,9 +412,45 @@ public class HTMLTag {
 	public HTMLTag a() {
 		return newChild("a");
 	}
-	
+
 	public HTMLTag setHeader1(String string) {
 		h1().addText(string);
+		return this;
+	}
+
+	/**
+	 * The anchor is used when you need to create a "start" tag and "end" tag.
+	 *
+	 * <p/>
+	 * For instance, let say you build this structure for a button:
+	 * <p/>
+	 * &lt;div class="button"&gt;<br>
+	 * &nbsp;&nbsp;&nbsp;&nbsp;&lt;span class="helpIcon" /&gt;<br>
+	 * &nbsp;&nbsp;&nbsp;&nbsp;&lt;span class="buttonText&gt;&lt/span&gt;<br>
+	 * &lt;/div&gt;
+	 * <p/>
+	 * And you want someone else decide what is going into the span text-tag. Then you can set this tag
+	 * as anchor, and use the methods writeStartTag(writer) and writeEndTag(writer) instead.
+	 *
+	 *
+	 * This pattern fits nice when building JSP custom tags.
+	 *
+	 * <p/>
+	 * <strong>NB!</strong> Any content within the anchor is NOT rendered.
+	 *
+	 */
+	public HTMLTag setAsAnchor() {
+		removeAnchor();
+		this.isAnchor = true;
+		getRoot().anchor = this;
+		return this;
+	}
+
+	public HTMLTag removeAnchor() {
+		if(getRoot().anchor != null) {
+			getRoot().anchor.isAnchor = false;
+			getRoot().anchor = null;
+		}
 		return this;
 	}
 
@@ -389,34 +460,18 @@ public class HTMLTag {
 	 * @param args
 	 */
 	public static void main(String[] args) {
-		HTMLTag tag = new HTMLTag("span");
-		HTMLTag oldTag = tag;
-		tag.addStyleRule("padding-top", "5px");
-		tag.addStyleRule("padding-bottom", "3px");
-		tag.addStyleRules("attribute: value; strange: not-strange");
-		tag.addStyleClass("test");
-		tag.addStyleClass("nice");
-		tag.setAttribute("id", "thisIsId");
-		System.out.println(tag);
-		tag = tag.newChild("a");
-		tag.setAttribute("href", "http://vg.no");
-		tag.addStyleRule("font-weight", "bolder");
-		tag.addText("Trykk her for Œ bes¿ke vg.");
-		System.out.println(oldTag);
+		HTMLTag tag = new HTMLTag("html").setAsAnchor();
 
-		tag = new HTMLTag("html")
-		  .head()
-		    .setTitle("Simpelt").getParent()
-		  .body()
-		    .h1()
-		      .addText("Se sŒ lett det er!").getParent()
-		    .p()
-		      .addText("Dette er et eksempel for Œ vise hvor lett det er Œ lage en html-side i java.")
-		      .addStyleRule("font-size", "11px").getParent()
-		    .p()
-		      .a()
-		        .setAttribute("href", "http://vg.no")
-		        .addText("Trykk her for Œ bes¿ke vg.");
-		System.out.println(tag.getRoot());
+		OutputStreamWriter out = new OutputStreamWriter(System.out);
+		try {
+			writeStartTagOutput(tag.getRoot(), out);
+			out.write("Hei på deg");
+			writeEndTagOutput(tag, out);
+
+			out.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 }
